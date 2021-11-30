@@ -2,6 +2,7 @@ package main
 
 
 import (
+    "fmt"
     //"strconv"
     "net/http"
     "encoding/json"
@@ -10,31 +11,44 @@ import (
 )
 
 func reportDeviceLocation(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type","application/json")
-	var dv db.Device
-	_ = json.NewDecoder(r.Body).Decode(&dv)
-	//r.Body = `{"type": dv.Type, "uniquelabel": dv.UniqueLabel, "longitude": dv.Longitude, "latitude": dv.Latitude}`
-	
-	//TODO: index device in the devices map
-	//if device is in the map, then
-	    //determine distance btn boserver and the device
-	    //compare the reported device location with previous location
-	    //if device has moved, 
-	        //update the location details: longitude and latitude
-	        //update the persisted location in db (deviceobject.updateLocation)
-	    //end if
-	//end if
-    
-    json.NewEncoder(w).Encode(dv)
+    fmt.Println("reported location: ")
+    var device db.Device
+	_ = json.NewDecoder(r.Body).Decode(&device)
+    //create a key to find the target device in the devices map
+    key := fmt.Sprintf("%s_%s", device.Type, device.UniqueLabel)
+    tmphdv := devices[key]
+    //index the map and update the obsvrlatitude and obsvrlongitude
+    tmphdv.Longitude = device.Longitude
+    tmphdv.Latitude  = device.Latitude
+    //update the db with the new changes
+    tmphdv.updateDeviceLocation()
+    devices[key] = tmphdv
+    //respond with the device, including the calculated distance
+    json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "reported location", Device: tmphdv})
 }
 
 func reportObserverLocation(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type","application/json")
-	var dv db.Device
-	_ = json.NewDecoder(r.Body).Decode(&dv)
-	//r.Body = `{"type": dv.Type, "uniquelabel": dv.UniqueLabel, "obsvrlongitude": dv.ObsvrLongitude, "obsvrlatitude": dv.ObsvrLatitude}`
-	//TODO: update observer location in the hot devices map
-    json.NewEncoder(w).Encode(dv)
+    fmt.Println("reported location: ")
+    var device db.Device
+	_ = json.NewDecoder(r.Body).Decode(&device)
+    //create a key to find the target device in the devices map
+    key := fmt.Sprintf("%s_%s", device.Type, device.UniqueLabel)
+    tmphdv := devices[key]
+    //index the map and update the obsvrlatitude and obsvrlongitude
+    tmphdv.ObsvrLongitude = device.ObsvrLongitude
+    tmphdv.ObsvrLatitude  = device.ObsvrLatitude
+    //read the device longitude and latitude
+    deviceLongitude := devices[key].Longitude
+    deviceLatitude := devices[key].Latitude
+    //determine distance between the two: device and observer, multiply by 1.60934 to convert to kilometres from miles
+    distanceInKm := 1.60934 * float32(distanceBtnGPSCoordinates(float64(deviceLatitude), float64(deviceLongitude), float64(device.ObsvrLatitude), float64(device.ObsvrLongitude)))
+    distanceInMetres := distanceInKm * 1000
+    tmphdv.DistanceFromObserver = distanceInMetres
+    //update the db with the new changes
+    tmphdv.updateObserverLocation()
+    devices[key] = tmphdv
+    //respond with the device, including the calculated distance
+    json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "reported location", Device: tmphdv})
 }
 
 

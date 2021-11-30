@@ -57,6 +57,7 @@ func main() {
     //++++++++++++++++++++
     database, _ = db.Connect()
     
+    devices = make(map[string]HotDevice)
     loadDevices()
     
     fmt.Println("Server listening on port: "+(strings.Split(httpEndPoint,":")[1])) 
