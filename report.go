@@ -24,7 +24,7 @@ func reportDeviceLocation(w http.ResponseWriter, r *http.Request) {
     tmphdv.updateDeviceLocation()
     devices[key] = tmphdv
     //respond with the device, including the calculated distance
-    json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "reported location", Device: tmphdv})
+    json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "device reported location", Device: tmphdv})
 }
 
 func reportObserverLocation(w http.ResponseWriter, r *http.Request) {
@@ -41,14 +41,14 @@ func reportObserverLocation(w http.ResponseWriter, r *http.Request) {
     deviceLongitude := devices[key].Longitude
     deviceLatitude := devices[key].Latitude
     //determine distance between the two: device and observer, multiply by 1.60934 to convert to kilometres from miles
-    distanceInKm := 1.60934 * float32(distanceBtnGPSCoordinates(float64(deviceLatitude), float64(deviceLongitude), float64(device.ObsvrLatitude), float64(device.ObsvrLongitude)))
+    distanceInKm := 1.60934 * float32(distanceBtnGPSCoordinates(deviceLatitude, deviceLongitude, device.ObsvrLatitude, device.ObsvrLongitude))
     distanceInMetres := distanceInKm * 1000
     tmphdv.DistanceFromObserver = distanceInMetres
     //update the db with the new changes
     tmphdv.updateObserverLocation()
     devices[key] = tmphdv
     //respond with the device, including the calculated distance
-    json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "reported location", Device: tmphdv})
+    json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "observer reported location", Device: tmphdv})
 }
 
 

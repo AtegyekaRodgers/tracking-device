@@ -121,8 +121,14 @@
                 <div class="flex-1 text-right md:text-center" id="hidden-email-form">
                     <h5 class="font-bold uppercase text-gray-600">Enter your email to start :</h5>
                     <hr/>
-                    <input type="text" id="current-user-email" placeholder="eg. someemail@gmail.com" />
-                    <button id="start-btn" >start</button>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                      <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                        Email: 
+                      </span>
+                      <input type="text" id="current-user-email" class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-r-md sm:text-sm border-gray-300" placeholder=" someemail@gmail.com"/>
+                    </div>
+                    <hr/>
+                    <button class="w-1/2 flex items-center justify-center rounded-md bg-black text-white" type="submit" id="start-btn" >start</button>
                 </div>
             </div>
 
@@ -139,7 +145,7 @@
                                 <h5 class="font-bold uppercase text-gray-600">Device being tracked</h5>
                                 <h4 class="font-bold text-2xl" id="devices-bold-label">CAR - UAP_102Y </h4>
                                 <select id="devices-drop-down"><option></option></select></span>
-                                <h5 class="font-bold text-gray-600"><span id="devices-distance">5</span> <span id="devices-distance-unit">m</span> <span>away</span></h5>
+                                <h5 class="font-bold text-gray-600"><span id="device-location-name"></span><span id="devices-distance">5</span> <span id="devices-distance-unit">m</span> <span>away</span></h5>
                             </div>
                         </div>
                     </div>
@@ -176,9 +182,9 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td>Wandegeya, Kampala</td>
-                                        <td> -12.0098101 , </td>
-                                        <td> 20.30440277 </td>
+                                        <td id="device-geo-location-city"><script>document.write(activeDevice.city);</script></td>
+                                        <td id="device-geo-location-latitude"> <script>document.write(activeDevice.latitude);</script> , </td>
+                                        <td id="device-geo-location-longitude"> <script>document.write(activeDevice.longitude);</script> </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -188,17 +194,17 @@
                                     <tr>
                                         <td>Type</td>
                                         <td></td>
-                                        <td>Car</td>
+                                        <td id="device-type"><script>document.write(activeDevice.type);</script></td>
                                     </tr>
                                     <tr>
                                         <td>State</td>
                                         <td></td>
-                                        <td>Stationary</td>
+                                        <td id="device-state"><script>document.write(activeDevice.state);</script></td>
                                     </tr>
                                     <tr>
                                         <td>Missing</td>
                                         <td></td>
-                                        <td>false</td>
+                                        <td id="device-missing"><script>document.write(activeDevice.missing);</script></td>
                                     </tr>
                                     
                                 </tbody>
@@ -254,55 +260,27 @@
     <script>
          var SERVER_HOST = "localhost";
          var base_url = `http://${SERVER_HOST}:7000`;
+         var activeDevice = {type="CAR", state: "stationary", missing: false, distance:5, units:"m", city:"Kampala",longitude:"32.033098", latitude:"0.331245"};
          var activeDeviceType  = "CAR";
          var activeDeviceLabel = "UAT_402V";
+         var activeDeviceLocation = "";
          var activeUserEmail   = "";
          var watchID;
          var geoLoc;
          
-         function useLocation(position) {
-            var currentLatitude = position.coords.latitude;
-            var currentLongitude = position.coords.longitude;
-            var requestData = {"type":"CAR", "uniquelabel":"UAP_102Y", "obsvrlongitude": currentLongitude, "obsvrlatitude": currentLatitude};
-            //report the location
-            axios({
-               url: base_url+"/report/observer",
-               method: "post",
-               data: requestData,
-               headers:{
-                        'Content-Type': 'application/json',
-                        "Allow": "GET, POST, HEAD, PUT, DELETE, OPTIONS"
-                    }
-             }).then(function(response) {
-                var msg = response.data.Success || response.data.Err;
-                if(response.data.Success){
-                    console.log(msg);
-                }
-             }, (error) => {
-                console.log(error);
-             });
-         }
-         
+         /*
          function errorHandler(err) {
             if(err.code == 1) {
                alert("Error: Access is denied!");
             } else if( err.code == 2) {
                alert("Error: Position is unavailable!");
             }
-         }
+         }*/
          
          function getLocationUpdate(){
-            if(navigator.geolocation){
-               // timeout at 10000 milliseconds (10 seconds)
-               var options = {timeout:20000};
-               geoLoc = navigator.geolocation;
-               watchID = geoLoc.watchPosition(useLocation, errorHandler, options);
-            } else {
-               alert("Sorry, browser does not support geolocation!");
-            }
+            //getGPSLocation();
+            var intervalID = setInterval(getGPSLocation, 6000);
          }
-         
-         //===
          function loadDashboard(){
              if(activeUserEmail==""){
                 document.querySelector("#already-logged-in").style.display = "none";
@@ -314,31 +292,38 @@
                    url: base_url+"/mydevices",
                    method: "post",
                    data: {"owneremail": activeUserEmail},
-                   headers:{
-                            'Content-Type': 'application/json',
-                            "Allow": "GET, POST, HEAD, PUT, DELETE, OPTIONS"
-                        }
-                 }).then((res) => res.json())
-                   .then(function(response) {
+                   headers:{'Content-Type': 'application/json',"Allow": "GET, POST, HEAD, PUT, DELETE, OPTIONS"}
+                 }).then(function(response) {
                      var msg = response.data.Success || response.data.Err;
                      if(response.data.Success){
-                        var devicesArr = response.data.devices;
+                        var devicesArr = response.data.Devices;
                         //populate the devices dropdown 
                         var deviceOptions = "<option></option>";
                         devicesArr.forEach((dvc)=>{
-                            deviceOptions += `<option>${dvc.Type} - ${dvc.UniqueLabel}</option>`;
+                            console.log("dvc.ID = ",dvc.ID,", dvc.type = ",dvc.type,", dvc.uniquelabel = ",dvc.uniquelabel);
+                            deviceOptions += `<option>${dvc.type} - ${dvc.uniquelabel}</option>`;
                         });
                         document.querySelector("#devices-drop-down").innerHTML = deviceOptions;
                         if(devicesArr.length>0){
                             var dv = devicesArr[0];
-                            document.querySelector("#devices-bold-label").textContent = `${dv.Type} - ${dv.UniqueLabel}`;
-                            activeDeviceType = dv.Type;
-                            activeDeviceLabel= dv.UniqueLabel;
-                            if(dv.Distance || dv.distance){
-                                var currentDistance = dv.Distance || dv.distance;
-                                var units = dv.Units || dv.units;
+                            activeDevice = dv;
+                            document.querySelector("#devices-bold-label").textContent = `${dv.type} - ${dv.uniquelabel}`;
+                            activeDeviceType = dv.type;
+                            activeDeviceLabel= dv.uniquelabel;
+                            console.log("dv=", dv);
+                            if(typeof dv.distance == "number"){
+                                var currentDistance = dv.distance;
+                                var units = dv.units !="" ? dv.units : "m";
+                                console.log("currentDistance=", currentDistance, "units = ",units);
                                 document.querySelector("#devices-distance").textContent = `${currentDistance}`;
                                 document.querySelector("#devices-distance-unit").textContent = `${units}`;
+                                document.querySelector("#device-geo-location-longitude").textContent = `${dv.longitude}`;
+                                document.querySelector("#device-geo-location-latitude").textContent = `${dv.latitude}`;
+                                document.querySelector("#device-state").textContent = `${dv.state}`;
+                                document.querySelector("#device-missing").textContent = `${dv.missing}`;
+                                document.querySelector("#device-type").textContent = `${dv.type}`;
+                                var elem = document.querySelector("#device-geo-location-city");
+                                displayLocation(dv.latitude,dv.longitude, elem);
                             }
                             getLocationUpdate();
                         }
@@ -354,6 +339,96 @@
             activeUserEmail = document.querySelector("#current-user-email").value;
             loadDashboard();
          });
+    </script>
+    
+    <script>
+        function getGPSLocation(){
+            if (navigator.geolocation){
+                navigator.geolocation.getCurrentPosition(useLocation, errorHandler);
+            }else{
+                console.log("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function errorHandler(error){
+            switch(error.code){
+                case error.PERMISSION_DENIED:
+                    console.log("User denied the request for Geolocation.");
+                break;
+                case error.POSITION_UNAVAILABLE:
+                    console.log("Location information is unavailable.");
+                break;
+                case error.TIMEOUT:
+                    console.log("The request to get user location timed out.");
+                break;
+                case error.UNKNOWN_ERROR:
+                    console.log("An unknown error occurred.");
+                break;
+            }
+        }
+        
+        function displayLocation(latitude,longitude, targetDOMElement){
+            var geocoder;
+            geocoder = new google.maps.Geocoder();
+            var latlng = new google.maps.LatLng(latitude, longitude);
+            geocoder.geocode(
+                {'latLng': latlng}, 
+                function(results, status) {
+                    if (status == google.maps.GeocoderStatus.OK){
+                        if (results[0]) {
+                            var add= results[0].formatted_address ;
+                            var  value=add.split(",");
+
+                            count=value.length;
+                            country=value[count-1];
+                            state=value[count-2];
+                            city=value[count-3];
+                            activeDeviceLocation = city;
+                            //document.querySelector("#device-location-name").textContent = activeDeviceLocation;
+                            targetDOMElement.textContent = city;
+                        }else {
+                            console.log("address not found");
+                        }
+                    }else{
+                        console.log("Geocoder failed due to: " + status);
+                    }
+                }
+            );
+        }
+        
+        function useLocation(position) {
+            var currentLatitude = position.coords.latitude;
+            var currentLongitude = position.coords.longitude;
+            var requestData = {"type":activeDeviceType, "uniquelabel":activeDeviceLabel, "obsvrlongitude": currentLongitude, "obsvrlatitude": currentLatitude};
+            //report the location
+            axios({
+               url: base_url+"/report/observer",
+               method: "post",
+               data: requestData,
+               headers:{'Content-Type': 'application/json', "Allow": "GET, POST, HEAD, PUT, DELETE, OPTIONS"}
+             }).then(function(response) {
+                var msg = response.data.Success || response.data.Err;
+                if(response.data.Success){
+                    console.log(msg);
+                    //use the response.data.Device
+                    var dv = response.data.Device;
+                    console.log("response.data.Device=",dv.Device);
+                    var currentDistanc = dv.distance;
+                    var unitts = dv.units != "" ? dv.units : "m";
+                    document.querySelector("#devices-distance").textContent = `${currentDistanc}`;
+                    document.querySelector("#devices-distance-unit").textContent = `${unitts}`;
+                    document.querySelector("#device-geo-location-longitude").textContent = `${dv.longitude}`;
+                    document.querySelector("#device-geo-location-latitude").textContent = `${dv.latitude}`;
+                    document.querySelector("#device-state").textContent = `${dv.state}`;
+                    document.querySelector("#device-missing").textContent = `${dv.missing}`;
+                    document.querySelector("#device-type").textContent = `${dv.type}`;
+                    var elem = document.querySelector("#device-geo-location-city");
+                    displayLocation(dv.latitude,dv.longitude, elem);
+                }
+             }, (error) => {
+                console.log(error);
+             });
+         }
     </script>
 
 
