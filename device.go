@@ -85,10 +85,12 @@ func getMyDevices(w http.ResponseWriter, r *http.Request) {
     var tmp Tmp
 	_ = json.NewDecoder(r.Body).Decode(&tmp)
     
-    var dvces []db.Device
+    var dvces []HotDevice
     err := database.Where("owneremail = ?", tmp.Owneremail).Find(&dvces).Error
-    
-    json.NewEncoder(w).Encode(dvces)
+    if err!=nil {
+        json.NewEncoder(w).Encode(struct{Err string;}{Err:err.Error()})
+    }
+    json.NewEncoder(w).Encode(struct{Success string; Devices: []HotDevice}{Success: "devices found", Devices:dvces})
 }
 
 func readUpdates(w http.ResponseWriter, r *http.Request) {

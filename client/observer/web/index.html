@@ -116,8 +116,17 @@
                     <h3 class="font-bold pl-2">Tracking system</h3>
                 </div>
             </div>
+            
+            <div class="flex flex-wrap" id="not-logged-in">
+                <div class="flex-1 text-right md:text-center" id="hidden-email-form">
+                    <h5 class="font-bold uppercase text-gray-600">Enter your email to start :</h5>
+                    <hr/>
+                    <input type="text" id="current-user-email" placeholder="eg. someemail@gmail.com" />
+                    <button id="start-btn" >start</button>
+                </div>
+            </div>
 
-            <div class="flex flex-wrap">
+            <div class="flex flex-wrap" id="already-logged-in">
                 
                 <div class="w-full md:w-1/2 xl:w-1/3 p-6">
                     <!--Metric Card-->
@@ -128,8 +137,9 @@
                             </div>
                             <div class="flex-1 text-right md:text-center">
                                 <h5 class="font-bold uppercase text-gray-600">Device being tracked</h5>
-                                <h4 class="font-bold text-2xl">CAR - UAP_102Y</h4>
-                                <h5 class="font-bold text-gray-600">2 Km away</h5>
+                                <h4 class="font-bold text-2xl" id="devices-bold-label">CAR - UAP_102Y </h4>
+                                <select id="devices-drop-down"><option></option></select></span>
+                                <h5 class="font-bold text-gray-600"><span id="devices-distance">5</span> <span id="devices-distance-unit">m</span> <span>away</span></h5>
                             </div>
                         </div>
                     </div>
@@ -244,6 +254,9 @@
     <script>
          var SERVER_HOST = "localhost";
          var base_url = `http://${SERVER_HOST}:7000`;
+         var activeDeviceType  = "CAR";
+         var activeDeviceLabel = "UAT_402V";
+         var activeUserEmail   = "";
          var watchID;
          var geoLoc;
          
@@ -288,6 +301,59 @@
                alert("Sorry, browser does not support geolocation!");
             }
          }
+         
+         //===
+         function loadDashboard(){
+             if(activeUserEmail==""){
+                document.querySelector("#already-logged-in").style.display = "none";
+                document.querySelector("#not-logged-in").style.display = "block";
+             }else{
+                document.querySelector("#not-logged-in").style.display = "none";
+                //retrieve all user's devices
+                axios({
+                   url: base_url+"/mydevices",
+                   method: "post",
+                   data: {"owneremail": activeUserEmail},
+                   headers:{
+                            'Content-Type': 'application/json',
+                            "Allow": "GET, POST, HEAD, PUT, DELETE, OPTIONS"
+                        }
+                 }).then((res) => res.json())
+                   .then(function(response) {
+                     var msg = response.data.Success || response.data.Err;
+                     if(response.data.Success){
+                        var devicesArr = response.data.devices;
+                        //populate the devices dropdown 
+                        var deviceOptions = "<option></option>";
+                        devicesArr.forEach((dvc)=>{
+                            deviceOptions += `<option>${dvc.Type} - ${dvc.UniqueLabel}</option>`;
+                        });
+                        document.querySelector("#devices-drop-down").innerHTML = deviceOptions;
+                        if(devicesArr.length>0){
+                            var dv = devicesArr[0];
+                            document.querySelector("#devices-bold-label").textContent = `${dv.Type} - ${dv.UniqueLabel}`;
+                            activeDeviceType = dv.Type;
+                            activeDeviceLabel= dv.UniqueLabel;
+                            if(dv.Distance || dv.distance){
+                                var currentDistance = dv.Distance || dv.distance;
+                                var units = dv.Units || dv.units;
+                                document.querySelector("#devices-distance").textContent = `${currentDistance}`;
+                                document.querySelector("#devices-distance-unit").textContent = `${units}`;
+                            }
+                            getLocationUpdate();
+                        }
+                     }
+                   },(error) => {
+                      console.log(error);
+                   });
+                  document.querySelector("#already-logged-in").style.display = "block";
+             }
+         }
+         loadDashboard();
+         document.querySelector("#start-btn").addEventListener("click", function(){
+            activeUserEmail = document.querySelector("#current-user-email").value;
+            loadDashboard();
+         });
     </script>
 
 
