@@ -77,6 +77,20 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(device)
 }
 
+
+func getMyDevices(w http.ResponseWriter, r *http.Request) {
+    type Tmp struct {
+        Owneremail string 
+    }
+    var tmp Tmp
+	_ = json.NewDecoder(r.Body).Decode(&tmp)
+    
+    var dvces []db.Device
+    err := database.Where("owneremail = ?", tmp.Owneremail).Find(&dvces).Error
+    
+    json.NewEncoder(w).Encode(dvces)
+}
+
 func readUpdates(w http.ResponseWriter, r *http.Request) {
     //TODO: read which device's updates are needed 
     //retrieve from db and respond
