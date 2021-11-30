@@ -3,6 +3,7 @@ package main
 
 import (
     "fmt"
+    "math"
     //"strconv"
     "net/http"
     "encoding/json"
@@ -18,7 +19,7 @@ type HotDevice struct {
 
 var devices map[string]HotDevice
 
-func (dv *HotDevice) updateLocation() {
+func (dv *HotDevice) updateDeviceLocation() {
     var device db.Device
     database.First(&device, "unique_label = ?", dv.UniqueLabel)
     device.Longitude = dv.Longitude
@@ -26,13 +27,30 @@ func (dv *HotDevice) updateLocation() {
     database.Save(&device)
 }
 
-//TODO: function to load all devices data from db into devices map
+func (dv *HotDevice) updateObserverLocation() {
+    var device db.Device
+    database.First(&device, "unique_label = ?", dv.UniqueLabel)
+    device.ObsvrLongitude = dv.ObsvrLongitude
+    device.ObsvrLatitude  = dv.ObsvrLatitude
+    database.Save(&device)
+}
+
+//function to load all devices data from db into devices map
 func loadDevices() {
     //read all records in the devices table 
-    //for each row in result, 
-        //create an instance of HotDevice with record data
-        //push it to the devices map
-    //end loop
+    rows, err := database.Table("devices").Select("id", "unique_label", "ownername", "ownerphone", "owneremail", "type", "state", "current_holder", "latitude","longitude", "obsvrlatitude","obsvrlongitude").Rows()   
+    //for each row, 
+    for rows.Next() {
+        var hdv HotDevice
+        rows.Scan(
+            &hdv.ID,
+            &hdv.UniqueLabel, &hdv.Ownername, &hdv.Ownerphone, &hdv.Owneremail, &hdv.Type, &hdv.State, &hdv.CurrentHolder, 
+            &hdv.Latitude, &hdv.Longitude, &hdv.ObsvrLatitude, &hdv.ObsvrLongitude )
+        //create a key for the target device in the devices map
+        key := fmt.Sprintf("%s_%s", hdv.Type, hdv.UniqueLabel)
+        //add hdv to the devices map
+        devices[key] = hdv
+    }
 }
 
 func registerDevice(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +93,8 @@ func reportDeviceLocation(w http.ResponseWriter, r *http.Request) {
     //index the map and update the obsvrlatitude and obsvrlongitude
     devices[key].Longitude = device.Longitude
     devices[key].Latitude  = device.Latitude
+    //update the db with the new changes
+    devices[key].updateDeviceLocation()
     //respond with the device, including the calculated distance
     json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "reported location", Device: devices[key]})
 }
@@ -96,6 +116,8 @@ func reportObserverLocation(w http.ResponseWriter, r *http.Request) {
     distanceInKm := 1.60934 * float32(distanceBtnGPSCoordinates(float64(deviceLatitude), float64(deviceLongitude), float64(device.ObsvrLatitude), float64(device.ObsvrLongitude)))
     distanceInMetres := distanceInKm * 1000
     devices[key].DistanceFromObserver = distanceInMetres
+    //update the db with the new changes
+    devices[key].updateObserverLocation()
     //respond with the device, including the calculated distance
     json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "reported location", Device: devices[key]})
 }
@@ -104,20 +126,15 @@ func reportObserverLocation(w http.ResponseWriter, r *http.Request) {
 func distanceBtnGPSCoordinates(lat1, lng1, lat2, lng2 float64) float64 {
 	radlat1 := float64(math.Pi * lat1 / 180)
 	radlat2 := float64(math.Pi * lat2 / 180)
-
 	theta := float64(lng1 - lng2)
 	radtheta := float64(math.Pi * theta / 180)
-
 	dist := math.Sin(radlat1)*math.Sin(radlat2) + math.Cos(radlat1)*math.Cos(radlat2)*math.Cos(radtheta)
-
 	if dist > 1 {
 		dist = 1
 	}
-
 	dist = math.Acos(dist)
 	dist = dist * 180 / math.Pi
 	dist = dist * 60 * 1.1515
-
 	return dist
 }
 
