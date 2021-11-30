@@ -75,8 +75,6 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
     var device db.Device
     database.Model(&device).Where("unique_label = ?", uniquelabel).Updates(dv)
     
-    //database.First(&device, "unique_label = ?", uniquelabel)
-    
     database.Save(&device)
     json.NewEncoder(w).Encode(device)
 }
