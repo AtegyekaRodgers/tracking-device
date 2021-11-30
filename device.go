@@ -2,6 +2,7 @@ package main
 
 
 import (
+    "fmt"
     //"strconv"
     "net/http"
     "encoding/json"
@@ -11,6 +12,8 @@ import (
 
 type HotDevice struct {
     db.Device
+    DistanceFromObserver float32 `json:"distance"`
+    Units string `json:"units" gorm:"default:m"`
 }
 
 var devices map[string]HotDevice
@@ -60,6 +63,62 @@ func readUpdates(w http.ResponseWriter, r *http.Request) {
     //TODO: read which device's updates are needed 
     //retrieve from db and respond
     json.NewEncoder(w).Encode(struct{Success string}{Success: "resource under development"})
+}
+
+func reportDeviceLocation(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("reported location: ")
+    var device db.Device
+	_ = json.NewDecoder(r.Body).Decode(&device)
+    //create a key to find the target device in the devices map
+    key := fmt.Sprintf("%s_%s", device.Type, device.UniqueLabel)
+    //HotDevice
+    //index the map and update the obsvrlatitude and obsvrlongitude
+    devices[key].Longitude = device.Longitude
+    devices[key].Latitude  = device.Latitude
+    //respond with the device, including the calculated distance
+    json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "reported location", Device: devices[key]})
+}
+
+func reportObserverLocation(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("reported location: ")
+    var device db.Device
+	_ = json.NewDecoder(r.Body).Decode(&device)
+    //create a key to find the target device in the devices map
+    key := fmt.Sprintf("%s_%s", device.Type, device.UniqueLabel)
+    //HotDevice
+    //index the map and update the obsvrlatitude and obsvrlongitude
+    devices[key].ObsvrLongitude = device.ObsvrLongitude
+    devices[key].ObsvrLatitude  = device.ObsvrLatitude
+    //read the device longitude and latitude
+    deviceLongitude := devices[key].Longitude
+    deviceLatitude := devices[key].Latitude
+    //determine distance between the two: device and observer, multiply by 1.60934 to convert to kilometres from miles
+    distanceInKm := 1.60934 * float32(distanceBtnGPSCoordinates(float64(deviceLatitude), float64(deviceLongitude), float64(device.ObsvrLatitude), float64(device.ObsvrLongitude)))
+    distanceInMetres := distanceInKm * 1000
+    devices[key].DistanceFromObserver = distanceInMetres
+    //respond with the device, including the calculated distance
+    json.NewEncoder(w).Encode(struct{Success string; Device HotDevice}{Success: "reported location", Device: devices[key]})
+}
+
+
+func distanceBtnGPSCoordinates(lat1, lng1, lat2, lng2 float64) float64 {
+	radlat1 := float64(math.Pi * lat1 / 180)
+	radlat2 := float64(math.Pi * lat2 / 180)
+
+	theta := float64(lng1 - lng2)
+	radtheta := float64(math.Pi * theta / 180)
+
+	dist := math.Sin(radlat1)*math.Sin(radlat2) + math.Cos(radlat1)*math.Cos(radlat2)*math.Cos(radtheta)
+
+	if dist > 1 {
+		dist = 1
+	}
+
+	dist = math.Acos(dist)
+	dist = dist * 180 / math.Pi
+	dist = dist * 60 * 1.1515
+
+	return dist
 }
 
 

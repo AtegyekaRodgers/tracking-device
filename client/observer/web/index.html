@@ -14,7 +14,7 @@
     <link href="https://unpkg.com/tailwindcss/dist/tailwind.min.css" rel="stylesheet"> <!--Replace with your tailwind.css once created-->
     <link href="https://afeld.github.io/emoji-css/emoji.css" rel="stylesheet"> <!--Totally optional :) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.min.js" integrity="sha256-xKeoJ50pzbUGkpQxDYHD7o7hxe0LaOGeguUidbq6vis=" crossorigin="anonymous"></script>
-    
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 </head>
 
 
@@ -239,6 +239,55 @@
                 }
             }
         }
+    </script>
+    
+    <script>
+         var SERVER_HOST = "localhost";
+         var base_url = `http://${SERVER_HOST}:7000`;
+         var watchID;
+         var geoLoc;
+         
+         function useLocation(position) {
+            var currentLatitude = position.coords.latitude;
+            var currentLongitude = position.coords.longitude;
+            var requestData = {"type":"CAR", "uniquelabel":"UAP_102Y", "obsvrlongitude": currentLongitude, "obsvrlatitude": currentLatitude};
+            //report the location
+            axios({
+               url: base_url+"/report/observer",
+               method: "post",
+               data: requestData,
+               headers:{
+                        'Content-Type': 'application/json',
+                        "Allow": "GET, POST, HEAD, PUT, DELETE, OPTIONS"
+                    }
+             }).then(function(response) {
+                var msg = response.data.Success || response.data.Err;
+                if(response.data.Success){
+                    console.log(msg);
+                }
+             }, (error) => {
+                console.log(error);
+             });
+         }
+         
+         function errorHandler(err) {
+            if(err.code == 1) {
+               alert("Error: Access is denied!");
+            } else if( err.code == 2) {
+               alert("Error: Position is unavailable!");
+            }
+         }
+         
+         function getLocationUpdate(){
+            if(navigator.geolocation){
+               // timeout at 10000 milliseconds (10 seconds)
+               var options = {timeout:20000};
+               geoLoc = navigator.geolocation;
+               watchID = geoLoc.watchPosition(useLocation, errorHandler, options);
+            } else {
+               alert("Sorry, browser does not support geolocation!");
+            }
+         }
     </script>
 
 
