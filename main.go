@@ -3,74 +3,62 @@ package main
 
 import (
     "fmt"
-    "sync"
     "log"
 	"flag"
+	"embed"
+	"io/fs"
 	"strings"
 	"net/http"
-	"github.com/julienschmidt/httprouter"
-	"github.com/afenet-demo/afenet-server/db"
+	"gorm.io/gorm"
+	"encoding/json"
+	"github.com/gorilla/mux"
+	"github.com/AtegyekaRodgers/tracking-device/db"
 )
 
-type Pubsub struct {
-  mu     sync.RWMutex
-  subs   map[string][]chan string
-  closed bool
-}
+//go:embed client/observer/web/*
+var obsvrweb embed.FS
 
-func NewPubsub() *Pubsub {
-  ps := &Pubsub{}
-  ps.subs = make(map[string][]chan string)
-  return ps
-}
-
-var pubsubBroker *Pubsub
-
-func (ps *Pubsub) Close() {
-  ps.mu.Lock()
-  defer ps.mu.Unlock()
-
-  if !ps.closed {
-    ps.closed = true
-    for _, subs := range ps.subs {
-      for _, ch := range subs {
-        close(ch)
-      }
-    }
-  }
-}
-
-func getRouter() *httprouter.Router {
-	router := httprouter.New()
-	router.POST("/user/login", userLogin)
-	router.POST("/user/register", registeringUser)
-	router.PUT("/user/rights", assignUserRights)
-	router.POST("/policy/new", uploadingNewPolicy)
-	router.GET("/policy/read", readPolicy)
-	router.POST("/policy/agree", agreeToPolicy)
-	router.POST("/policy/disagree", disagreeToPolicy)
-	router.POST("/policy/violation", reportingPolicyViolation)
-	router.POST("/alert/status", updateAlertStatus)
-	router.POST("/notification/status", updateNotificationStatus)
-	router.GET("/actions/monitor", monitoringActions)
-	return router
-}
+//go:embed client/device/web/*
+var devceweb embed.FS
 
 var database *gorm.DB
 
+func index(w http.ResponseWriter, r *http.Request) {
+    json.NewEncoder(w).Encode(struct{Success string}{Success: "Welcome !"})
+}
+
+func resourceNotFound(w http.ResponseWriter, r *http.Request) {
+    json.NewEncoder(w).Encode(struct{Success string}{Success: "Resource not found !"})
+}
+
+func getRouter() *mux.Router {
+	clientObserverWeb, _ := fs.Sub(obsvrweb, "client/observer/web")
+	client_device_web, _ := fs.Sub(devceweb, "client/device/web")
+	router := mux.NewRouter()
+	router.HandleFunc("/ajax/updates", readUpdates).Methods("GET")
+	router.HandleFunc("/report/observer", reportObserverLocation).Methods("POST")
+	router.HandleFunc("/report/device", reportDeviceLocation).Methods("POST")
+	router.HandleFunc("/device/register", registerDevice).Methods("POST")
+	router.HandleFunc("/device/update/{uniquelabel}", updateDevice).Methods("PUT")
+	router.PathPrefix("/client/observer/web").Handler( http.FileServer(http.FS(clientObserverWeb)) ).Methods("GET")
+	router.PathPrefix("/client/device/web").Handler( http.FileServer(http.FS(client_device_web)) ).Methods("GET")
+	router.PathPrefix("/").Handler( http.FileServer(http.FS(clientObserverWeb)) ).Methods("GET")
+	router.HandleFunc("/", index).Methods("POST")
+	//router.NotFoundHandler = http.HandlerFunc(resourceNotFound)
+	return router
+}
+
 func main() {
     //++++| os.Args |+++++
-    wsEndPoint := ":4400" 
-    addr := flag.String("addr", wsEndPoint, "AFENET API service address") 
+    httpEndPoint := ":7000" 
+    addr := flag.String("addr", httpEndPoint, "API service address") 
     flag.Parse()
     //++++++++++++++++++++
-    database, err := db.Connect()
-      if err != nil {
-        json.NewEncoder(w).Encode(struct{errors string}{ errors: err.Error()})
-      }
-    defer database.Close()
+    database, _ = db.Connect()
     
-    fmt.Println("Server listening on port: "+(strings.Split(wsEndPoint,":")[1])) 
+    loadDevices()
+    
+    fmt.Println("Server listening on port: "+(strings.Split(httpEndPoint,":")[1])) 
     log.Fatal(http.ListenAndServe(*addr, getRouter()))
 }
 
