@@ -19,7 +19,9 @@
 
 
 <body class="bg-gray-800 font-sans leading-normal tracking-normal mt-12">
-
+    <script>
+        var activeDevice = {type="CAR", state: "stationary", missing: false, distance:5, units:"m", city:"Kampala",longitude:"32.033098", latitude:"0.331245"};
+    </script>
     <!--Nav-->
     <nav class="bg-gray-800 pt-2 md:pt-1 pb-1 px-1 mt-0 h-auto fixed w-full z-20 top-0">
 
@@ -260,7 +262,6 @@
     <script>
          var SERVER_HOST = "localhost";
          var base_url = `http://${SERVER_HOST}:7000`;
-         var activeDevice = {type="CAR", state: "stationary", missing: false, distance:5, units:"m", city:"Kampala",longitude:"32.033098", latitude:"0.331245"};
          var activeDeviceType  = "CAR";
          var activeDeviceLabel = "UAT_402V";
          var activeDeviceLocation = "";

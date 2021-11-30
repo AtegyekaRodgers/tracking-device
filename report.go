@@ -11,7 +11,7 @@ import (
 )
 
 func reportDeviceLocation(w http.ResponseWriter, r *http.Request) {
-    fmt.Println("reported location: ")
+    fmt.Println("device reported location: ")
     var device db.Device
 	_ = json.NewDecoder(r.Body).Decode(&device)
     //create a key to find the target device in the devices map
@@ -20,6 +20,7 @@ func reportDeviceLocation(w http.ResponseWriter, r *http.Request) {
     //index the map and update the obsvrlatitude and obsvrlongitude
     tmphdv.Longitude = device.Longitude
     tmphdv.Latitude  = device.Latitude
+    fmt.Println("device reported location: lati=", device.Latitude," longi=",device.Longitude)
     //update the db with the new changes
     tmphdv.updateDeviceLocation()
     devices[key] = tmphdv
@@ -28,7 +29,6 @@ func reportDeviceLocation(w http.ResponseWriter, r *http.Request) {
 }
 
 func reportObserverLocation(w http.ResponseWriter, r *http.Request) {
-    fmt.Println("reported location: ")
     var device db.Device
 	_ = json.NewDecoder(r.Body).Decode(&device)
     //create a key to find the target device in the devices map
@@ -40,6 +40,7 @@ func reportObserverLocation(w http.ResponseWriter, r *http.Request) {
     //read the device longitude and latitude
     deviceLongitude := devices[key].Longitude
     deviceLatitude := devices[key].Latitude
+    fmt.Println("observer reported location: lati=", device.ObsvrLatitude," longi=",device.ObsvrLongitude)
     //determine distance between the two: device and observer, multiply by 1.60934 to convert to kilometres from miles
     distanceInKm := 1.60934 * float32(distanceBtnGPSCoordinates(deviceLatitude, deviceLongitude, device.ObsvrLatitude, device.ObsvrLongitude))
     distanceInMetres := distanceInKm * 1000
