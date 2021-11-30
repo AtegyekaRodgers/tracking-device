@@ -40,11 +40,11 @@ func getRouter() *mux.Router {
 	router.HandleFunc("/report/device", reportDeviceLocation).Methods("POST")
 	router.HandleFunc("/device/register", registerDevice).Methods("POST")
 	router.HandleFunc("/device/update/{uniquelabel}", updateDevice).Methods("PUT")
-	router.PathPrefix("/client/observer/web").Handler( http.FileServer(http.FS(clientObserverWeb)) ).Methods("GET")
-	router.PathPrefix("/client/device/web").Handler( http.FileServer(http.FS(client_device_web)) ).Methods("GET")
+	router.PathPrefix("/observer/web").Handler(http.StripPrefix("/device/web/", http.FileServer(http.FS(clientObserverWeb))) ).Methods("GET")
+	router.PathPrefix("/device/web").Handler(http.StripPrefix("/device/web/", http.FileServer(http.FS(client_device_web))) ).Methods("GET")
 	router.PathPrefix("/").Handler( http.FileServer(http.FS(clientObserverWeb)) ).Methods("GET")
 	router.HandleFunc("/", index).Methods("POST")
-	//router.NotFoundHandler = http.HandlerFunc(resourceNotFound)
+	router.NotFoundHandler = http.HandlerFunc(resourceNotFound)
 	return router
 }
 
