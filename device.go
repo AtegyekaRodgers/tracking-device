@@ -58,11 +58,12 @@ func loadDevices() {
 }
 
 func registerDevice(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Registering ...")
 	w.Header().Set("Content-Type","application/json")
 	var device db.Device
 	_ = json.NewDecoder(r.Body).Decode(&device)
 	database.Create(&device)
-	json.NewEncoder(w).Encode(device)
+	json.NewEncoder(w).Encode(struct{Success string}{Success: "Device registered."})
 }
 
 func updateDevice(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +77,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
     database.Model(&device).Where("unique_label = ?", uniquelabel).Updates(dv)
     
     database.Save(&device)
-    json.NewEncoder(w).Encode(device)
+    json.NewEncoder(w).Encode(struct{Success string}{Success: "Device updated."})
 }
 
 
