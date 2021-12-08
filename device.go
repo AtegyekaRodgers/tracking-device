@@ -3,6 +3,7 @@ package main
 
 import (
     "fmt"
+    "sync"
     "math"
     //"strconv"
     "net/http"
@@ -18,6 +19,7 @@ type HotDevice struct {
 }
 
 var devices map[string]HotDevice
+var mu sync.Mutex
 
 func (dv *HotDevice) updateDeviceLocation() {
     var device db.Device
@@ -52,7 +54,9 @@ func loadDevices() {
             //create a key for the target device in the devices map
             key := fmt.Sprintf("%s_%s", hdv.Type, hdv.UniqueLabel)
             //add hdv to the devices map
+            mu.Lock()
             devices[key] = hdv
+            mu.Unlock()
         }
     }
 }
@@ -97,7 +101,7 @@ func getMyDevices(w http.ResponseWriter, r *http.Request) {
 }
 
 func readUpdates(w http.ResponseWriter, r *http.Request) {
-    //TODO: read which device's updates are needed 
+    //TODO: read which device's updates are needed
     //retrieve from db and respond
     json.NewEncoder(w).Encode(struct{Success string;}{Success: "resource under development"})
 }

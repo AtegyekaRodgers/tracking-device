@@ -14,14 +14,12 @@
     <link href="https://unpkg.com/tailwindcss/dist/tailwind.min.css" rel="stylesheet"> <!--Replace with your tailwind.css once created-->
     <link href="https://afeld.github.io/emoji-css/emoji.css" rel="stylesheet"> <!--Totally optional :) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.min.js" integrity="sha256-xKeoJ50pzbUGkpQxDYHD7o7hxe0LaOGeguUidbq6vis=" crossorigin="anonymous"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBDW3VAOcCOiZWacIGfeBCOkmIijg_s444"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 </head>
 
 
 <body class="bg-gray-800 font-sans leading-normal tracking-normal mt-12">
-    <script>
-        var activeDevice = {type="CAR", state: "stationary", missing: false, distance:5, units:"m", city:"Kampala",longitude:"32.033098", latitude:"0.331245"};
-    </script>
     <!--Nav-->
     <nav class="bg-gray-800 pt-2 md:pt-1 pb-1 px-1 mt-0 h-auto fixed w-full z-20 top-0">
 
@@ -189,9 +187,9 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td id="device-geo-location-city"><script>document.write(activeDevice.city);</script></td>
-                                        <td id="device-geo-location-latitude"> <script>document.write(activeDevice.latitude);</script> , </td>
-                                        <td id="device-geo-location-longitude"> <script>document.write(activeDevice.longitude);</script> </td>
+                                        <td id="device-geo-location-city"> </td>
+                                        <td id="device-geo-location-latitude"> </td>
+                                        <td id="device-geo-location-longitude"> </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -201,17 +199,17 @@
                                     <tr>
                                         <td>Type</td>
                                         <td></td>
-                                        <td id="device-type"><script>document.write(activeDevice.type);</script></td>
+                                        <td id="device-type"></td>
                                     </tr>
                                     <tr>
                                         <td>State</td>
                                         <td></td>
-                                        <td id="device-state"><script>document.write(activeDevice.state);</script></td>
+                                        <td id="device-state"></td>
                                     </tr>
                                     <tr>
                                         <td>Missing</td>
                                         <td></td>
-                                        <td id="device-missing"><script>document.write(activeDevice.missing);</script></td>
+                                        <td id="device-missing"></td>
                                     </tr>
                                     
                                 </tbody>
@@ -227,7 +225,17 @@
         </div>
     </div>
 
-
+    <script>
+        var activeDevice = {type:"CAR", state: "stationary", missing: false, distance:5, units:"m", city:"Wandegeya",longitude:"32.033098", latitude:"0.331245"};
+        window.onload = function(){
+            document.querySelector("#device-type").textContent = activeDevice.type;
+            document.querySelector("#device-state").textContent = activeDevice.state;
+            document.querySelector("#device-missing").textContent = activeDevice.missing;
+            document.querySelector("#device-geo-location-city").textContent = activeDevice.city;
+            document.querySelector("#device-geo-location-latitude").textContent = activeDevice.longitude;
+            document.querySelector("#device-geo-location-longitude").textContent = activeDevice.longitude;
+        };
+    </script>
 
 
     <script>
@@ -306,7 +314,6 @@
                         //populate the devices dropdown 
                         var deviceOptions = "<option></option>";
                         devicesArr.forEach((dvc)=>{
-                            console.log("dvc.ID = ",dvc.ID,", dvc.type = ",dvc.type,", dvc.uniquelabel = ",dvc.uniquelabel);
                             deviceOptions += `<option>${dvc.type} - ${dvc.uniquelabel}</option>`;
                         });
                         document.querySelector("#devices-drop-down").innerHTML = deviceOptions;
@@ -316,7 +323,6 @@
                             document.querySelector("#devices-bold-label").textContent = `${dv.type} - ${dv.uniquelabel}`;
                             activeDeviceType = dv.type;
                             activeDeviceLabel= dv.uniquelabel;
-                            console.log("dv=", dv);
                             if(typeof dv.distance == "number"){
                                 var currentDistance = dv.distance;
                                 var units = dv.units !="" ? dv.units : "m";
@@ -374,32 +380,36 @@
         }
         
         function displayLocation(latitude,longitude, targetDOMElement){
-            var geocoder;
-            geocoder = new google.maps.Geocoder();
-            var latlng = new google.maps.LatLng(latitude, longitude);
-            geocoder.geocode(
-                {'latLng': latlng}, 
-                function(results, status) {
-                    if (status == google.maps.GeocoderStatus.OK){
-                        if (results[0]) {
-                            var add= results[0].formatted_address ;
-                            var  value=add.split(",");
-
-                            count=value.length;
-                            country=value[count-1];
-                            state=value[count-2];
-                            city=value[count-3];
-                            activeDeviceLocation = city;
-                            //document.querySelector("#device-location-name").textContent = activeDeviceLocation;
-                            targetDOMElement.textContent = city;
-                        }else {
-                            console.log("address not found");
-                        }
-                    }else{
-                        console.log("Geocoder failed due to: " + status);
-                    }
+            var geocoder = "https://maps.googleapis.com/maps/api/geocode/json?";
+            var API_KEY = "AIzaSyBDW3VAOcCOiZWacIGfeBCOkmIijg_s444";
+            var APIendpoint = geocoder+"latlng="+latitude+","+longitude+"&key="+API_KEY;
+            axios({url: APIendpoint, method: "get" }).then(function(response) {
+                /*//response = { 
+                results: [
+                       {
+                         "address_components" : [...],
+                         "formatted_address" : "277 Bedford Avenue, Brooklyn, NY 11211, USA",
+                         "geometry" : {
+                            "location" : { "lat" : 40.714232, "lng" : -73.9612889 },
+                            "location_type" : "ROOFTOP",
+                            "viewport" : {
+                               "northeast" : { "lat" : 40.7155809802915, "lng" : -73.9599399197085 }, 
+                               "southwest" : { "lat" : 40.7128830197085, "lng" : -73.96263788029151 } 
+                             }
+                         }, "place_id" : "ChIJd8BlQ2BZwokRAFUEcm_qrcA", "types" : [ "street_address" ]
+                       },
+                     ] 
+                   } ;
+                */
+                if(response.data.results && response.data.results.length > 0) {
+                    var city_area = response.data.results[0].formatted_address;
+                    targetDOMElement.textContent = city_area;
+                }else{
+                    console.log("response = ", response);
                 }
-            );
+             }, (error) => {
+                console.log(error);
+             });
         }
         
         function useLocation(position) {
@@ -415,10 +425,9 @@
              }).then(function(response) {
                 var msg = response.data.Success || response.data.Err;
                 if(response.data.Success){
-                    console.log(msg);
                     //use the response.data.Device
                     var dv = response.data.Device;
-                    console.log("response.data.Device=",dv.Device);
+                    console.log("response.data.Device.distance =", response.data.Device.distance);
                     var currentDistanc = dv.distance;
                     var unitts = dv.units != "" ? dv.units : "m";
                     document.querySelector("#devices-distance").textContent = `${currentDistanc}`;
