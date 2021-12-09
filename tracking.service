@@ -1,0 +1,21 @@
+[Unit]
+Description=Tracking system service 
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+
+Environment=PATH=/root/tracking-device/bin
+
+ExecStart=/root/tracking-device/bin/tracking-system resurrect
+ExecReload=/root/tracking-device/bin/tracking-system reload all
+ExecStop=/root/tracking-device/bin/tracking-system kill
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target
