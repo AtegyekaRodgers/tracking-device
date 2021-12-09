@@ -51,7 +51,7 @@ func getRouter() *mux.Router {
 
 func main() {
     //++++| os.Args |+++++
-    httpEndPoint := ":7000" 
+    httpEndPoint := ":6000" 
     addr := flag.String("addr", httpEndPoint, "API service address") 
     flag.Parse()
     //++++++++++++++++++++
